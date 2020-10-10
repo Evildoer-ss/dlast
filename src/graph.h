@@ -11,6 +11,7 @@ using namespace std;
 
 class BasicBlock {
 private:
+    bool is_tag_ = false;
     long long offset_, jump_off_, fail_off_;
     vector<string> refs_;
     BasicBlock* jump_;
@@ -27,7 +28,12 @@ public:
         jump_ = nullptr;
         fail_ = nullptr;
         father_ = nullptr;
+        is_tag_ = false;
     }
+
+    void Tag() { is_tag_ = true; }
+    void UnTag() { is_tag_ = false; }
+    bool isTag() { return is_tag_; }
 
     long long getOffset() const { return offset_; }
     long long getJumpOff() const { return jump_off_; }
@@ -35,6 +41,7 @@ public:
     BasicBlock* getFather() { return father_; }
     BasicBlock* getJump() { return jump_; }
     BasicBlock* getFail() { return fail_; }
+    vector<string>& getRefs() { return refs_; }
 
     void setJump(BasicBlock* jump) { jump_ = jump; }
     void setFail(BasicBlock* fail) { fail_ = fail; }
@@ -43,12 +50,14 @@ public:
 
 class Function {
 private:
+    bool is_tag_ = false, is_gened_ = false;
     long long id_;
     string name_;
     vector<BasicBlock*> bb_list_;
-    BasicBlock* root_;
+    BasicBlock* root_ = nullptr;
     vector<long long> callees_;
     vector<Function*> childs_;
+    vector<string> corpus_;
 
 public:
     Function() {}
@@ -58,12 +67,19 @@ public:
         callees_ = callees;
     }
 
+    void Tag() { is_tag_ = true; }
+    void UnTag() { is_tag_ = false; }
+    bool isTag() { return is_tag_; }
+
+    bool isGened() { return is_gened_; }
+
     string& getName() { return name_; }
     long long& getID() { return id_; }
     vector<BasicBlock*>& getBBList() { return bb_list_; }
     BasicBlock* getRoot() { return root_; }
     vector<long long>& getCallees() { return callees_; }
     vector<Function*>& getChilds() { return childs_; }
+    vector<string>& getCorpus() { return corpus_; }
 
     void setName(string& name) { name_ = name; }
     void setID(long long id) { id_ = id; }
@@ -72,17 +88,35 @@ public:
     void addBB(BasicBlock* bb) { bb_list_.push_back(bb); }
 
     void genContronFlowGraph();
+
+    void dfs(vector<BasicBlock*>&, BasicBlock*);
+    void genCorpus();
 };
 
 class CallGraph {
 private:
     vector<Function*> func_list_;
     Function* root_;
+    vector<string> corpus_;
+
 public:
     vector<Function*>& getFuncList() { return func_list_; }
     Function* getRoot() { return root_; }
+    vector<string>& getCorpus() { return corpus_; }
 
     void setRoot(Function* func) { root_ = func;}
     void addFunc(Function* func) { func_list_.push_back(func); }
     void genCallGraph();
+
+    void dfs(vector<Function*>&, Function*);
+    void genCorpus();
+
+    void PrintCorpus() const {
+        for (auto it : corpus_) {
+            cout << it << std::endl;
+
+
+        }
+        return;
+    }
 };

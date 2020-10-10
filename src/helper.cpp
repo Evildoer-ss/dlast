@@ -40,8 +40,6 @@ CallGraph* InitFromJson(string tmp_dir) {
             cur_func->addBB(cur_bb);
         }
         call_graph->addFunc(cur_func);
-
-        break;
     }
     return call_graph;
 }
@@ -60,7 +58,8 @@ void GenerateCorpus(char* c_tmp_dir) {
 
     CallGraph* call_graph = GenerateCallGraph(tmp_dir);
 
-
+    call_graph->genCorpus();
+    call_graph->PrintCorpus();
 
     return;
 }

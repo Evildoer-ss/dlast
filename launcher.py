@@ -111,7 +111,8 @@ class FixFuncs:
             cur_dict['name'] = name
             cur_dict['callee'] = []
             for callee in func['postMethods']:
-                cur_dict['callee'].append(callee['id'])
+                if callee['id'] not in cur_dict['callee']: cur_dict['callee'].append(callee['id'])
+            
             fixed_cg.append(cur_dict)
         open(CG_FIXED_PATH, 'w').write(json.dumps(fixed_cg))
         return func2id

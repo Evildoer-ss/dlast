@@ -31,6 +31,41 @@ void Function::genContronFlowGraph() {
     return;
 }
 
+string vector2str(vector<string>& str) {
+    string res = "";
+    for (int i = 0; i < str.size(); ++i) {
+        res += str[i];
+    }
+    return res;
+}
+
+void Function::dfs(vector<BasicBlock*>& prevs, BasicBlock* cur) {
+    if (cur->isTag()) { return; }
+    cur->Tag();
+    prevs.push_back(cur);
+    if (cur->getJump() == nullptr && cur->getFail() == nullptr) {
+        for (int i = 0; i < prevs.size(); ++i) {
+            BasicBlock* cur = prevs[i];
+            corpus_.push_back(vector2str(cur->getRefs()));
+        }
+        prevs.pop_back();
+        cur->UnTag();
+        return;
+    }
+    if (cur->getFail()) { dfs(prevs, cur->getFail()); }
+    if (cur->getJump()) { dfs(prevs, cur->getJump()); }
+    prevs.pop_back();
+    cur->UnTag();
+    return;
+}
+
+void Function::genCorpus() {
+    vector<BasicBlock*> prevs;
+    if (root_ == nullptr) { return; }
+    dfs(prevs, root_);
+    return;
+}
+
 void CallGraph::genCallGraph() {
     for (int i = 0; i < func_list_.size(); ++i) {
         Function* cur_func = func_list_[i];
@@ -51,10 +86,42 @@ void CallGraph::genCallGraph() {
 
     // find root function node
     for (int i = 0; i < func_list_.size(); ++i) {
-        if (!func_list_[i]->getName().compare("method.AppDelegate.application:openURL:options:")) {
+        // if (!func_list_[i]->getName().compare("method.AppDelegate.application:openURL:options:")) {
+        if (!func_list_[i]->getName().compare("method.GXDataManager.saveGXDefaultClientId:")) {
             root_ = func_list_[i];
             break;
         }
     }
+    return;
+}
+
+void CallGraph::dfs(vector<Function*>& prevs, Function* cur) {
+    if (cur->isTag()) { return; }
+    prevs.push_back(cur);
+    cur->Tag();
+    if (cur->getChilds().size() == 0) {
+        for (int i = 0; i < prevs.size(); ++i) {
+            Function* cur = prevs[i];
+            if (!cur->isGened()) { cur->genCorpus(); }
+            
+            // corpus_.push_back(vector2str(cur->getCorpus()));
+        }
+        prevs.pop_back();
+        cur->UnTag();
+        return;
+    }
+    for (int i = 0; i < cur->getChilds().size(); ++i) {
+        dfs(prevs, cur->getChilds()[i]);
+    }
+    prevs.pop_back();
+    cur->UnTag();
+    return;
+}
+
+void CallGraph::genCorpus() {
+    vector<Function*> prevs;
+    if (root_ == nullptr) { return; }
+    dfs(prevs, root_);
+
     return;
 }
