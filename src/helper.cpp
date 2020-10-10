@@ -11,7 +11,7 @@ CallGraph* InitFromJson(string tmp_dir) {
     string cfg_path = tmp_dir + "/cfg_fixed.json";
     string cg_path = tmp_dir + "/cg_fixed.json";
 
-    cout << "contron flow graph path: " << cfg_path << endl;
+    cout << "control flow graph path: " << cfg_path << endl;
     cout << "call graph path: " << cg_path << endl;
 
     ifstream in_cfg(cfg_path);
@@ -37,7 +37,7 @@ CallGraph* InitFromJson(string tmp_dir) {
             long long cur_fail = cur_bb_raw["fail"];
             vector<string> cur_refs = cur_bb_raw["refs"];
             BasicBlock* cur_bb = new BasicBlock(cur_offset, cur_refs, cur_jump, cur_fail);
-            cur_func->addbb(cur_bb);
+            cur_func->addBB(cur_bb);
         }
         call_graph->addFunc(cur_func);
 
