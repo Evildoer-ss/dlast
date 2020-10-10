@@ -95,6 +95,10 @@ void CallGraph::genCallGraph() {
     return;
 }
 
+void sub_dfs() {
+    // TODO
+}
+
 void CallGraph::dfs(vector<Function*>& prevs, Function* cur) {
     if (cur->isTag()) { return; }
     prevs.push_back(cur);
@@ -103,8 +107,8 @@ void CallGraph::dfs(vector<Function*>& prevs, Function* cur) {
         for (int i = 0; i < prevs.size(); ++i) {
             Function* cur = prevs[i];
             if (!cur->isGened()) { cur->genCorpus(); }
-            
-            // corpus_.push_back(vector2str(cur->getCorpus()));
+            // TODO
+            corpus_.push_back(vector2str(cur->getCorpus()));
         }
         prevs.pop_back();
         cur->UnTag();
@@ -118,10 +122,12 @@ void CallGraph::dfs(vector<Function*>& prevs, Function* cur) {
     return;
 }
 
-void CallGraph::genCorpus() {
+void CallGraph::genCorpus(ofstream& out) {
     vector<Function*> prevs;
     if (root_ == nullptr) { return; }
     dfs(prevs, root_);
+
+    for (auto it : corpus_) { out << it << endl; }
 
     return;
 }

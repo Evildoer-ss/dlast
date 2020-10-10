@@ -58,8 +58,12 @@ void GenerateCorpus(char* c_tmp_dir) {
 
     CallGraph* call_graph = GenerateCallGraph(tmp_dir);
 
-    call_graph->genCorpus();
+    string out_path = tmp_dir + "/corpus.txt";
+    ofstream out(out_path);
+    call_graph->genCorpus(out);
     call_graph->PrintCorpus();
+
+    cout << "output file: " << out_path << endl;
 
     return;
 }

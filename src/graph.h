@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <vector>
 #include <string>
+#include <fstream>
 #include <map>
 
 using namespace std;
@@ -109,13 +110,11 @@ public:
     void genCallGraph();
 
     void dfs(vector<Function*>&, Function*);
-    void genCorpus();
+    void genCorpus(ofstream& out);
 
     void PrintCorpus() const {
         for (auto it : corpus_) {
             cout << it << std::endl;
-
-
         }
         return;
     }
