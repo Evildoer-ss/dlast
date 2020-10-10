@@ -6,6 +6,8 @@ import subprocess
 import ctypes
 
 
+DEBUG = 0
+
 # TMP_DIR = os.path.join('/Users/ssj/tmp', str(time.time()))
 TMP_DIR = os.path.join('/Users/ssj/tmp', '1602256449.093935')
 FUNC_PATH = os.path.join(TMP_DIR, 'funcs.json')
@@ -25,19 +27,25 @@ if not os.path.exists(TMP_DIR): os.makedirs(TMP_DIR)
 if not os.path.exists(CFG_DIR): os.makedirs(CFG_DIR)
 
 
+def run_cmd(cmd):
+    if DEBUG: return
+    os.system(cmd)
+
 class Radare2:
     def __init__(self, binary_path):
-        # pass
+        if DEBUG: return
         self.pipe = subprocess.Popen(['r2', '-A', binary_path], stdin=subprocess.PIPE)
     def send(self, cmd):
-        # pass
+        if DEBUG: return
         self.pipe.stdin.write(cmd.encode('utf-8'))
         self.pipe.stdin.write(b'\n')
         self.pipe.stdin.flush()
     def sendline(self):
+        if DEBUG: return
         self.pipe.stdin.write(b'\n')
         self.pipe.stdin.flush()
     def quit(self):
+        if DEBUG: return
         self.pipe.stdin.write(b'q\n')
         self.pipe.stdin.flush()
 
@@ -87,7 +95,7 @@ class FixFuncs:
     @staticmethod
     def fix_cg_json():
         raw_cg = json.loads(open(CG_PATH, 'r').read())
-        fixed_cg = {}
+        fixed_cg = []
         func2id = {}
         for func in raw_cg['methods']:
             sel = func['sel']
@@ -99,11 +107,12 @@ class FixFuncs:
 
             func2id[name] = func['id']
             cur_dict = {}
+            cur_dict['id'] = func['id']
             cur_dict['name'] = name
             cur_dict['callee'] = []
             for callee in func['postMethods']:
                 cur_dict['callee'].append(callee['id'])
-            fixed_cg[func['id']] = cur_dict
+            fixed_cg.append(cur_dict)
         open(CG_FIXED_PATH, 'w').write(json.dumps(fixed_cg))
         return func2id
 
@@ -118,13 +127,13 @@ def generate_fixed_json_file(binary_path):
     addr2str = FixFuncs.fix_strs_json()
     addr2func = FixFuncs.fix_funcs_json()
 
-    os.system('%s -m scan -i objc-msg-xref -f %s -o %s' % (TOOLS_IBLESSING, binary_path, TMP_DIR))
+    run_cmd('%s -m scan -i objc-msg-xref -f %s -o %s' % (TOOLS_IBLESSING, binary_path, TMP_DIR))
     out_file = os.path.join(TMP_DIR, '%s_method-xrefs.iblessing.txt' % (os.path.basename(binary_path)))
     if not os.path.exists(out_file): return
-    os.system('%s -m generator -i objc-msg-xref-json -f %s -o %s' % (TOOLS_IBLESSING, out_file, TMP_DIR))
+    run_cmd('%s -m generator -i objc-msg-xref-json -f %s -o %s' % (TOOLS_IBLESSING, out_file, TMP_DIR))
     out_file += '_objc_msg_xrefs.iblessing.json'
     if not os.path.exists(out_file): return
-    os.system('mv %s %s' % (out_file, CG_PATH))
+    run_cmd('mv %s %s' % (out_file, CG_PATH))
 
     func2id = FixFuncs.fix_cg_json()
 
@@ -140,17 +149,18 @@ def generate_fixed_json_file(binary_path):
     FixFuncs.fix_cfg_json(addr2str, addr2func, func2id)
 
 def main():
-    if len(sys.argv) < 2: sys.exit('Usage')
-    
     binary_path = sys.argv[1]
 
-    # generate_fixed_json_file(binary_path)
+    generate_fixed_json_file(binary_path)
 
-    helper_lib = ctypes.CDLL(os.path.join(PROJ_ROOT_PATH, 'libs', 'libhelper.dylib'))
-    helper_lib.generate_corpus(TMP_DIR.encode())
+    # helper_lib = ctypes.CDLL(os.path.join(PROJ_ROOT_PATH, 'libs', 'libhelper.dylib'))
+    # helper_lib.GenerateCorpus(TMP_DIR.encode())
 
 
 if __name__ == '__main__':
+    if len(sys.argv) < 2: sys.exit('Usage')
+    if len(sys.argv) == 3: DEBUG = 1
+
     start_time = time.time()
 
     main()
