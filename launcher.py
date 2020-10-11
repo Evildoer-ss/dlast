@@ -8,8 +8,8 @@ import ctypes
 
 DEBUG = 0
 
-# TMP_DIR = os.path.join('/Users/ssj/tmp', str(time.time()))
-TMP_DIR = os.path.join('/Users/ssj/tmp', '1602256449.093935')
+TMP_DIR = os.path.join('/Users/ssj/tmp', str(time.time()))
+# TMP_DIR = os.path.join('/Users/ssj/tmp', '1602256449.093935')
 FUNC_PATH = os.path.join(TMP_DIR, 'funcs.json')
 FUNC_FIXED_PATH = os.path.join(TMP_DIR, 'funcs_fixed.json')
 STR_PATH = os.path.join(TMP_DIR, 'strs.json')
@@ -154,8 +154,8 @@ def main():
 
     generate_fixed_json_file(binary_path)
 
-    # helper_lib = ctypes.CDLL(os.path.join(PROJ_ROOT_PATH, 'libs', 'libhelper.dylib'))
-    # helper_lib.GenerateCorpus(TMP_DIR.encode())
+    helper_lib = ctypes.CDLL(os.path.join(PROJ_ROOT_PATH, 'libs', 'libhelper.dylib'))
+    helper_lib.GenerateCorpus(TMP_DIR.encode())
 
 
 if __name__ == '__main__':
