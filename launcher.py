@@ -9,7 +9,7 @@ import ctypes
 DEBUG = 0
 
 TMP_DIR = os.path.join('/Users/ssj/tmp', str(time.time()))
-# TMP_DIR = os.path.join('/Users/ssj/tmp', '1603112925.237345')
+# TMP_DIR = os.path.join('/Users/ssj/tmp', '1603182172.931805')
 FUNC_PATH = os.path.join(TMP_DIR, 'funcs.json')
 FUNC_FIXED_PATH = os.path.join(TMP_DIR, 'funcs_fixed.json')
 STR_PATH = os.path.join(TMP_DIR, 'strs.json')
@@ -18,6 +18,7 @@ STR_FIXED_PATH = os.path.join(TMP_DIR, 'strs_fixed.json')
 CFG_PATH = os.path.join(TMP_DIR, 'cfg.json')
 CFG_FIXED_PATH = os.path.join(TMP_DIR, 'cfg_fixed.json')
 CG_PATH = os.path.join(TMP_DIR, 'cg.json')
+CG_FIXED_PRE_PATH = os.path.join(TMP_DIR, 'cg_fixed_pre.json')
 CG_FIXED_PATH = os.path.join(TMP_DIR, 'cg_fixed.json')
 
 if not os.path.dirname(sys.argv[0]): PROJ_ROOT_PATH = os.getcwd()
@@ -64,7 +65,6 @@ class FixFuncs:
     def fix_funcs_json():
         print(FUNC_PATH)
         a = open(FUNC_PATH).read()
-        open('/tmp/tmptest.txt', 'w').write(a)
         func_list = json.loads(a)
         fixed_dict = {}
         for it in func_list:
@@ -122,8 +122,51 @@ class FixFuncs:
                 if callee['id'] not in cur_dict['callee']: cur_dict['callee'].append(callee['id'])
             
             fixed_cg.append(cur_dict)
-        open(CG_FIXED_PATH, 'w').write(json.dumps(fixed_cg))
+        open(CG_FIXED_PRE_PATH, 'w').write(json.dumps(fixed_cg))
         return func2id
+
+def generate_useful_funclist(func2id, addr2func, cg_fixed_path=CG_FIXED_PRE_PATH):
+    # root_func = 'method.AppDelegate.application:openURL:options:'
+    root_func = 'method.class.ZXBinarizer.binarizerWithSource:'
+    queue = []
+    func_id_list = []
+    fixed_items = []
+    cg_list = json.loads(open(cg_fixed_path).read())
+    for it in cg_list:
+        if it['name'] == root_func:
+            queue.append(it)
+            func_id_list.append(it['id'])
+            fixed_items.append(it)
+            break
+
+    cg_dict = {}
+    for it in cg_list:
+        cg_dict[it['id']] = {'name': it['name'], 'callee': it['callee']}
+
+    while queue:
+        cur_it = queue[0]
+        queue.pop(0)
+        for it_id in cur_it['callee']:
+            if it_id in func_id_list: continue
+            it = cg_dict[it_id]
+            it['id'] = it_id
+            queue.append(it)
+            func_id_list.append(it_id)
+            fixed_items.append(it)
+    open(CG_FIXED_PATH, 'w').write(json.dumps(fixed_items, indent=4))
+
+    print(func_id_list)
+
+    id2func = {}
+    func2addr = {}
+    for key, val in func2id.items(): id2func[val] = key
+    for key, val in addr2func.items(): func2addr[val] = key
+    fd = open('/tmp/radare2_useful_funclist.ssj', 'w')
+    for it in func_id_list:
+        if it not in id2func.keys(): continue
+        if id2func[it] not in func2addr.keys(): continue
+        fd.write(str(func2addr[id2func[it]]))
+        fd.write('\n')
 
 def generate_fixed_json_file(binary_path):
     r2 = Radare2(binary_path)
@@ -132,20 +175,23 @@ def generate_fixed_json_file(binary_path):
 
     while not os.path.exists(STR_PATH) or not os.path.exists(FUNC_PATH): time.sleep(2)
     r2.sendline()
+    time.sleep(1)
 
     addr2str = FixFuncs.fix_strs_json()
     addr2func = FixFuncs.fix_funcs_json()
 
     run_cmd('%s -m scan -i objc-msg-xref -f %s -o %s' % (TOOLS_IBLESSING, binary_path, TMP_DIR))
     out_file = os.path.join(TMP_DIR, '%s_method-xrefs.iblessing.txt' % (os.path.basename(binary_path)))
-    # if not os.path.exists(out_file): return
+    if not os.path.exists(out_file): print('warning: %s', out_file)
     run_cmd('%s -m generator -i objc-msg-xref-json -f %s -o %s' % (TOOLS_IBLESSING, out_file, TMP_DIR))
     out_file += '_objc_msg_xrefs.iblessing.json'
-    # if not os.path.exists(out_file): return
+    if not os.path.exists(out_file): print('warning: %s', out_file)
     run_cmd('mv %s %s' % (out_file, CG_PATH))
 
     func2id = FixFuncs.fix_cg_json()
+    generate_useful_funclist(func2id, addr2func)
 
+    time.sleep(1)
     # for func_addr in addr2func.keys():
     #     r2.send('s ' + str(func_addr))
     r2.send('echo [ > ' + CFG_PATH)
@@ -178,7 +224,6 @@ if __name__ == '__main__':
         main()
     except Exception as e:
         import traceback
-        print(traceback.print_stack())
         print(traceback.print_exc())
     finally:
         print(time.time() - start_time)
