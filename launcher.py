@@ -126,8 +126,8 @@ class FixFuncs:
         return func2id
 
 def generate_useful_funclist(func2id, addr2func, cg_fixed_path=CG_FIXED_PRE_PATH):
-    # root_func = 'method.AppDelegate.application:openURL:options:'
-    root_func = 'method.class.ZXBinarizer.binarizerWithSource:'
+    root_func = 'method.AppDelegate.application:openURL:options:'
+    # root_func = 'method.class.ZXBinarizer.binarizerWithSource:'
     queue = []
     func_id_list = []
     fixed_items = []
@@ -148,6 +148,7 @@ def generate_useful_funclist(func2id, addr2func, cg_fixed_path=CG_FIXED_PRE_PATH
         queue.pop(0)
         for it_id in cur_it['callee']:
             if it_id in func_id_list: continue
+            if it_id not in cg_dict.keys(): continue
             it = cg_dict[it_id]
             it['id'] = it_id
             queue.append(it)
@@ -155,7 +156,7 @@ def generate_useful_funclist(func2id, addr2func, cg_fixed_path=CG_FIXED_PRE_PATH
             fixed_items.append(it)
     open(CG_FIXED_PATH, 'w').write(json.dumps(fixed_items, indent=4))
 
-    print(func_id_list)
+    print(len(func_id_list))
 
     id2func = {}
     func2addr = {}

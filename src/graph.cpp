@@ -86,8 +86,8 @@ void CallGraph::genCallGraph() {
 
     // find root function node
     for (int i = 0; i < func_list_.size(); ++i) {
-        // if (!func_list_[i]->getName().compare("method.AppDelegate.application:openURL:options:")) {
-        if (!func_list_[i]->getName().compare("method.GXDataManager.saveGXDefaultClientId:")) {
+        if (!func_list_[i]->getName().compare("method.AppDelegate.application:openURL:options:")) {
+        // if (!func_list_[i]->getName().compare("method.GXDataManager.saveGXDefaultClientId:")) {
             root_ = func_list_[i];
             break;
         }
