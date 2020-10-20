@@ -50,7 +50,7 @@ function homeSinglePress() {
             ObjC.classes.SBUIController.sharedInstance().handleHomeButtonSinglePressUp();
         });
     } else {
-        console.log("Sorry, I only tested this on iOS 9 - 11! :(");
+        // console.log("Sorry, I only tested this on iOS 9 - 11! :(");
     }
 }
 
@@ -187,6 +187,7 @@ function fuzz(url) {
         var fuzzedURL = String.format(this.url, term.value);
 
         // this should launch the app
+        console.log(fuzzedURL);
         if (openURL(fuzzedURL)) {
             console.log("Opened URL: " + fuzzedURL);
         } else {

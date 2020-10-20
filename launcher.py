@@ -9,12 +9,13 @@ import ctypes
 DEBUG = 0
 
 TMP_DIR = os.path.join('/Users/ssj/tmp', str(time.time()))
-# TMP_DIR = os.path.join('/Users/ssj/tmp', '1602256449.093935')
+# TMP_DIR = os.path.join('/Users/ssj/tmp', '1603112925.237345')
 FUNC_PATH = os.path.join(TMP_DIR, 'funcs.json')
 FUNC_FIXED_PATH = os.path.join(TMP_DIR, 'funcs_fixed.json')
 STR_PATH = os.path.join(TMP_DIR, 'strs.json')
 STR_FIXED_PATH = os.path.join(TMP_DIR, 'strs_fixed.json')
-CFG_DIR = os.path.join(TMP_DIR, 'cfgs')
+# CFG_DIR = os.path.join(TMP_DIR, 'cfgs')
+CFG_PATH = os.path.join(TMP_DIR, 'cfg.json')
 CFG_FIXED_PATH = os.path.join(TMP_DIR, 'cfg_fixed.json')
 CG_PATH = os.path.join(TMP_DIR, 'cg.json')
 CG_FIXED_PATH = os.path.join(TMP_DIR, 'cg_fixed.json')
@@ -24,7 +25,6 @@ else: PROJ_ROOT_PATH = os.path.abspath(os.path.dirname(sys.argv[0]))
 TOOLS_IBLESSING = os.path.join(PROJ_ROOT_PATH, 'tools', 'iblessing-darwin')
 
 if not os.path.exists(TMP_DIR): os.makedirs(TMP_DIR)
-if not os.path.exists(CFG_DIR): os.makedirs(CFG_DIR)
 
 
 def run_cmd(cmd):
@@ -48,6 +48,7 @@ class Radare2:
         if DEBUG: return
         self.pipe.stdin.write(b'q\n')
         self.pipe.stdin.flush()
+        while subprocess.Popen.poll(self.pipe) == None: time.sleep(5)
 
 class FixFuncs:
     @staticmethod
@@ -73,11 +74,18 @@ class FixFuncs:
 
     @staticmethod
     def fix_cfg_json(addr2str, addr2func, func2id):
+        # eliminate single comma
+        raw_cfg = open(CFG_PATH).readlines()
+        while ',\n' in raw_cfg: raw_cfg.remove(',\n')
+        raw_cfg = json.loads(''.join(raw_cfg))
+
         fixed_dict = {}
-        for func_addr in addr2func.keys():
+        for cur_cfg in raw_cfg:
+            func_addr = cur_cfg['offset']
+            if func_addr not in addr2func.keys(): continue
             if addr2func[func_addr] not in func2id.keys(): continue
-            cur_cfg = json.loads(open(os.path.join(CFG_DIR, str(func_addr) + '.json')).read())[0]
-            cur_cfg_fixed = {'blocks': [], 'name': addr2func[func_addr]}
+            # cur_cfg_fixed = {'blocks': [], 'name': addr2func[func_addr]}
+            cur_cfg_fixed = {'blocks': [], 'name': cur_cfg['name']}
             for block in cur_cfg['blocks']:
                 block_fixed = {}
                 block_fixed['offset'] = block['offset']
@@ -122,7 +130,7 @@ def generate_fixed_json_file(binary_path):
     r2.send('aflj > ' + FUNC_PATH)
     r2.send('izj > ' + STR_PATH)
 
-    while not os.path.exists(STR_PATH) or not os.path.exists(FUNC_PATH): time.sleep(8)
+    while not os.path.exists(STR_PATH) or not os.path.exists(FUNC_PATH): time.sleep(2)
     r2.sendline()
 
     addr2str = FixFuncs.fix_strs_json()
@@ -130,22 +138,24 @@ def generate_fixed_json_file(binary_path):
 
     run_cmd('%s -m scan -i objc-msg-xref -f %s -o %s' % (TOOLS_IBLESSING, binary_path, TMP_DIR))
     out_file = os.path.join(TMP_DIR, '%s_method-xrefs.iblessing.txt' % (os.path.basename(binary_path)))
-    if not os.path.exists(out_file): return
+    # if not os.path.exists(out_file): return
     run_cmd('%s -m generator -i objc-msg-xref-json -f %s -o %s' % (TOOLS_IBLESSING, out_file, TMP_DIR))
     out_file += '_objc_msg_xrefs.iblessing.json'
-    if not os.path.exists(out_file): return
+    # if not os.path.exists(out_file): return
     run_cmd('mv %s %s' % (out_file, CG_PATH))
 
     func2id = FixFuncs.fix_cg_json()
 
-    for func_addr in addr2func.keys():
-        r2.send('s ' + str(func_addr))
-        r2.send('agfj > ' + os.path.join(CFG_DIR, str(func_addr) + '.json'))
+    # for func_addr in addr2func.keys():
+    #     r2.send('s ' + str(func_addr))
+    r2.send('echo [ > ' + CFG_PATH)
+    r2.send('agfj >> ' + CFG_PATH)
+    r2.send('echo ] >> ' + CFG_PATH)
 
     # to fix
-    time.sleep(2)
+    while not os.path.exists(CFG_PATH): time.sleep(5)
+    while os.path.getsize(CFG_PATH) == 0: time.sleep(5)
     r2.quit()
-    r2.sendline()
 
     FixFuncs.fix_cfg_json(addr2str, addr2func, func2id)
 
@@ -164,6 +174,11 @@ if __name__ == '__main__':
 
     start_time = time.time()
 
-    main()
-
-    print(time.time() - start_time)
+    try:
+        main()
+    except Exception as e:
+        import traceback
+        print(traceback.print_stack())
+        print(traceback.print_exc())
+    finally:
+        print(time.time() - start_time)
