@@ -108,8 +108,8 @@ class FixFuncs:
                 for op in block['ops']:
                     if 'refs' not in op.keys(): continue
                     # Why ssj writes this line fucking long. -- ssj
-                    # block_fixed['refs'] += [addr2str[it['addr']][len('cstr.'):] for it in op['refs'] if it['type'] == 'DATA' and it['addr'] in addr2str.keys() and addr2str[it['addr']].startswith('cstr.')]
-                    block_fixed['refs'] += [addr2str[it['addr']] for it in op['refs'] if it['type'] == 'DATA' and it['addr'] in addr2str.keys()]
+                    block_fixed['refs'] += [addr2str[it['addr']][len('cstr.'):] for it in op['refs'] if it['type'] == 'DATA' and it['addr'] in addr2str.keys() and addr2str[it['addr']].startswith('cstr.')]
+                    # block_fixed['refs'] += [addr2str[it['addr']] for it in op['refs'] if it['type'] == 'DATA' and it['addr'] in addr2str.keys()]
                 cur_cfg_fixed['blocks'].append(block_fixed)
             fixed_dict[func2id[addr2func[func_addr]]] = cur_cfg_fixed
         open(CFG_FIXED_PATH, 'w').write(json.dumps(fixed_dict))
