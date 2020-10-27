@@ -6,4 +6,4 @@ all:
 	g++ objs/helper.o objs/graph.o objs/test_main.o -o bin/test_main
 	mv libhelper.dylib ../libs/libhelper.dylib
 clean:
-	rm graph.o helper.o libhelper.dylib test_main test_main.o
+	rm objs/* bin/*

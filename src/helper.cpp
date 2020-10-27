@@ -61,7 +61,7 @@ void GenerateCorpus(char* c_tmp_dir) {
     string out_path = tmp_dir + "/corpus.txt";
     ofstream out(out_path);
     call_graph->genCorpus(out);
-    call_graph->PrintCorpus();
+    // call_graph->PrintCorpus();
 
     cout << "output file: " << out_path << endl;
 

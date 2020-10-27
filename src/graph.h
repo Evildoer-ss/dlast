@@ -5,7 +5,8 @@
 #include <vector>
 #include <string>
 #include <fstream>
-#include <map>
+
+#define MAX_RECU_TIMES 100000
 
 using namespace std;
 
@@ -57,6 +58,7 @@ private:
     vector<BasicBlock*> bb_list_;
     BasicBlock* root_ = nullptr;
     vector<long long> callees_;
+    Function* father_ = nullptr;
     vector<Function*> childs_;
     vector<string> corpus_;
 
@@ -79,12 +81,14 @@ public:
     vector<BasicBlock*>& getBBList() { return bb_list_; }
     BasicBlock* getRoot() { return root_; }
     vector<long long>& getCallees() { return callees_; }
+    Function* getFather() { return father_; }
     vector<Function*>& getChilds() { return childs_; }
     vector<string>& getCorpus() { return corpus_; }
 
     void setName(string& name) { name_ = name; }
     void setID(long long id) { id_ = id; }
     void setRoot(BasicBlock* bb) { root_ = bb;}
+    void setFather(Function* fa) { father_ = fa;}
     void addChild(Function* func) { childs_.push_back(func); }
     void addBB(BasicBlock* bb) { bb_list_.push_back(bb); }
 
@@ -97,18 +101,19 @@ public:
 class CallGraph {
 private:
     vector<Function*> func_list_;
-    Function* root_;
+    vector<Function*> root_list_;
     vector<string> corpus_;
 
 public:
     vector<Function*>& getFuncList() { return func_list_; }
-    Function* getRoot() { return root_; }
+    vector<Function*>& getRootList() { return root_list_; }
     vector<string>& getCorpus() { return corpus_; }
 
-    void setRoot(Function* func) { root_ = func;}
+    void addRoot(Function* func) { root_list_.push_back(func); }
     void addFunc(Function* func) { func_list_.push_back(func); }
     void genCallGraph();
 
+    void sub_dfs(vector<Function*>, vector<int>&, int);
     void dfs(vector<Function*>&, Function*);
     void genCorpus(ofstream& out);
 

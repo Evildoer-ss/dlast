@@ -31,6 +31,7 @@ void Function::genContronFlowGraph() {
     return;
 }
 
+// may mutator's location
 string vector2str(vector<string>& str) {
     string res = "";
     for (int i = 0; i < str.size(); ++i) {
@@ -46,7 +47,10 @@ void Function::dfs(vector<BasicBlock*>& prevs, BasicBlock* cur) {
     if (cur->getJump() == nullptr && cur->getFail() == nullptr) {
         for (int i = 0; i < prevs.size(); ++i) {
             BasicBlock* cur = prevs[i];
-            corpus_.push_back(vector2str(cur->getRefs()));
+            string str = vector2str(cur->getRefs());
+            if (find(corpus_.begin(), corpus_.end(), str) == corpus_.end()) {
+                corpus_.push_back(str);
+            }
         }
         prevs.pop_back();
         cur->UnTag();
@@ -86,17 +90,40 @@ void CallGraph::genCallGraph() {
 
     // find root function node
     for (int i = 0; i < func_list_.size(); ++i) {
-        if (!func_list_[i]->getName().compare("method.AppDelegate.application:openURL:options:")) {
-        // if (!func_list_[i]->getName().compare("method.GXDataManager.saveGXDefaultClientId:")) {
-            root_ = func_list_[i];
-            break;
+        if (func_list_[i]->getFather() == nullptr) {
+            addRoot(func_list_[i]);
         }
     }
     return;
 }
 
-void sub_dfs() {
-    // TODO
+void CallGraph::sub_dfs(vector<Function*> prevs, vector<int>& sub_prevs, int idx) {
+    if (sub_prevs.size() == prevs.size()) {
+        string str = "";
+        // may mutator?
+        for (int i = 0; i < prevs.size(); ++i) {
+            if (sub_prevs[i] == -1) { continue; }
+            str += prevs[i]->getCorpus()[sub_prevs[i]];
+        }
+        if (str.compare("") && find(corpus_.begin(), corpus_.end(), str) == corpus_.end()) {
+            corpus_.push_back(str);
+        }
+        return;
+    }
+
+    if (prevs[idx]->getCorpus().size() == 0) {
+        sub_prevs.push_back(-1);
+        sub_dfs(prevs, sub_prevs, idx + 1);
+        sub_prevs.pop_back();
+        return;
+    }
+
+    for (int i = 0; i < prevs[idx]->getCorpus().size(); ++i) {
+        sub_prevs.push_back(i);
+        sub_dfs(prevs, sub_prevs, idx + 1);
+        sub_prevs.pop_back();
+    }
+    return;
 }
 
 void CallGraph::dfs(vector<Function*>& prevs, Function* cur) {
@@ -104,12 +131,32 @@ void CallGraph::dfs(vector<Function*>& prevs, Function* cur) {
     prevs.push_back(cur);
     cur->Tag();
     if (cur->getChilds().size() == 0) {
+        unsigned long long times = 1;
         for (int i = 0; i < prevs.size(); ++i) {
             Function* cur = prevs[i];
             if (!cur->isGened()) { cur->genCorpus(); }
-            // TODO
-            corpus_.push_back(vector2str(cur->getCorpus()));
+            auto sz = cur->getCorpus().size();
+            if (sz) { times *= sz; }
         }
+        if (times < MAX_RECU_TIMES) {
+            vector<int> sub_prevs;
+            if (prevs.size() != 0) { sub_dfs(prevs, sub_prevs, 0); }
+        }
+        else {
+            // cout << "WARNING: " << times << " may too big for recursion." << endl;
+        }
+        
+        // for (int i = 0; i < prevs.size(); ++i) {
+        //     Function* cur = prevs[i];
+        //     // if (!cur->isGened()) { cur->genCorpus(); }
+        //     // auto sz = cur->getCorpus().size();
+        //     if (cur->getCorpus().size() && cur->getCorpus()[0].compare("")) {
+        //         cout << cur->getCorpus()[0] << endl;
+        //     }
+        //     // TODO
+        //     string str = vector2str(cur->getCorpus());
+        //     if (str.compare("")) { corpus_.push_back(str); }
+        // }
         prevs.pop_back();
         cur->UnTag();
         return;
@@ -124,8 +171,11 @@ void CallGraph::dfs(vector<Function*>& prevs, Function* cur) {
 
 void CallGraph::genCorpus(ofstream& out) {
     vector<Function*> prevs;
-    if (root_ == nullptr) { return; }
-    dfs(prevs, root_);
+    for (int i = 0; i < root_list_.size(); ++i) {
+        Function* root = root_list_[i];
+        prevs.clear();
+        dfs(prevs, root);
+    }
 
     for (auto it : corpus_) { out << it << endl; }
 

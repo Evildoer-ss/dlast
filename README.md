@@ -1,5 +1,19 @@
 # DLSAT
 
+## TODO LIST FOR SSJ
+
+- [x] 改helper，建全图；
+- [ ] r2跟iblessing方法名字匹配；
+- [x] 可以输入iblessing跳过分析；
+- [x] 去掉不是cstr.开头的字符串；
+- [ ] 整理helper的输出结果；
+
+fuzz部分：
+
+- [ ] openURL(url)；
+- [ ] 把所有静态分析到的方法都hook一下(可能几百到一千?)，然后记录trace；
+- [ ] 要有feedback吗？
+
 ## For Developer
 
 <https://dwj1210.github.io/2020/08/06/%E5%88%A9%E7%94%A8%20URL%20Scheme%20%E8%BF%9C%E7%A8%8B%E7%AA%83%E5%8F%96%E7%94%A8%E6%88%B7%20token/>

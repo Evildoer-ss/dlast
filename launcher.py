@@ -1,9 +1,12 @@
+# coding: utf-8
+
 import os
 import sys
 import json
 import time
 import subprocess
 import ctypes
+import argparse
 
 
 DEBUG = 0
@@ -21,6 +24,8 @@ CG_PATH = os.path.join(TMP_DIR, 'cg.json')
 CG_FIXED_PRE_PATH = os.path.join(TMP_DIR, 'cg_fixed_pre.json')
 CG_FIXED_PATH = os.path.join(TMP_DIR, 'cg_fixed.json')
 
+EXISTED_CG_PATH = None
+
 if not os.path.dirname(sys.argv[0]): PROJ_ROOT_PATH = os.getcwd()
 else: PROJ_ROOT_PATH = os.path.abspath(os.path.dirname(sys.argv[0]))
 TOOLS_IBLESSING = os.path.join(PROJ_ROOT_PATH, 'tools', 'iblessing-darwin')
@@ -32,10 +37,18 @@ def run_cmd(cmd):
     if DEBUG: return
     os.system(cmd)
 
+def get_args():
+    parser = argparse.ArgumentParser(description="DLAST")
+    parser.add_argument("-i", "--input", type=str)
+    parser.add_argument('-o', '--output', type=str)
+    parser.add_argument("-d", "--debug", action="store_true",)
+    parser.add_argument("binary", type=str)
+    return parser.parse_args()
+
 class Radare2:
     def __init__(self, binary_path):
         if DEBUG: return
-        self.pipe = subprocess.Popen(['r2', '-A', binary_path], stdin=subprocess.PIPE)
+        self.pipe = subprocess.Popen(['r2', binary_path], stdin=subprocess.PIPE)
     def send(self, cmd):
         if DEBUG: return
         self.pipe.stdin.write(cmd.encode('utf-8'))
@@ -94,6 +107,8 @@ class FixFuncs:
                 block_fixed['refs'] = []
                 for op in block['ops']:
                     if 'refs' not in op.keys(): continue
+                    # Why ssj writes this line fucking long. -- ssj
+                    # block_fixed['refs'] += [addr2str[it['addr']][len('cstr.'):] for it in op['refs'] if it['type'] == 'DATA' and it['addr'] in addr2str.keys() and addr2str[it['addr']].startswith('cstr.')]
                     block_fixed['refs'] += [addr2str[it['addr']] for it in op['refs'] if it['type'] == 'DATA' and it['addr'] in addr2str.keys()]
                 cur_cfg_fixed['blocks'].append(block_fixed)
             fixed_dict[func2id[addr2func[func_addr]]] = cur_cfg_fixed
@@ -126,18 +141,19 @@ class FixFuncs:
         return func2id
 
 def generate_useful_funclist(func2id, addr2func, cg_fixed_path=CG_FIXED_PRE_PATH):
-    root_func = 'method.AppDelegate.application:openURL:options:'
-    # root_func = 'method.class.ZXBinarizer.binarizerWithSource:'
+    root_func = 'openURL'
+    # root_func = 'method.AppDelegate.application:openURL:options:'
+    # method.AppContainer.AppDelegate.application:openURL:options:
     queue = []
     func_id_list = []
     fixed_items = []
     cg_list = json.loads(open(cg_fixed_path).read())
     for it in cg_list:
-        if it['name'] == root_func:
+        if root_func in it['name']:
             queue.append(it)
             func_id_list.append(it['id'])
             fixed_items.append(it)
-            break
+            # break
 
     cg_dict = {}
     for it in cg_list:
@@ -171,6 +187,7 @@ def generate_useful_funclist(func2id, addr2func, cg_fixed_path=CG_FIXED_PRE_PATH
 
 def generate_fixed_json_file(binary_path):
     r2 = Radare2(binary_path)
+    r2.send('aa')
     r2.send('aflj > ' + FUNC_PATH)
     r2.send('izj > ' + STR_PATH)
 
@@ -181,13 +198,15 @@ def generate_fixed_json_file(binary_path):
     addr2str = FixFuncs.fix_strs_json()
     addr2func = FixFuncs.fix_funcs_json()
 
-    run_cmd('%s -m scan -i objc-msg-xref -f %s -o %s' % (TOOLS_IBLESSING, binary_path, TMP_DIR))
-    out_file = os.path.join(TMP_DIR, '%s_method-xrefs.iblessing.txt' % (os.path.basename(binary_path)))
-    if not os.path.exists(out_file): print('warning: %s', out_file)
-    run_cmd('%s -m generator -i objc-msg-xref-json -f %s -o %s' % (TOOLS_IBLESSING, out_file, TMP_DIR))
-    out_file += '_objc_msg_xrefs.iblessing.json'
-    if not os.path.exists(out_file): print('warning: %s', out_file)
-    run_cmd('mv %s %s' % (out_file, CG_PATH))
+    if EXISTED_CG_PATH is None:
+        run_cmd('%s -m scan -i objc-msg-xref -f %s -o %s' % (TOOLS_IBLESSING, binary_path, TMP_DIR))
+        out_file = os.path.join(TMP_DIR, '%s_method-xrefs.iblessing.txt' % (os.path.basename(binary_path)))
+        if not os.path.exists(out_file): print('warning: %s', out_file)
+        run_cmd('%s -m generator -i objc-msg-xref-json -f %s -o %s' % (TOOLS_IBLESSING, out_file, TMP_DIR))
+        out_file += '_objc_msg_xrefs.iblessing.json'
+        if not os.path.exists(out_file): print('warning: %s', out_file)
+        run_cmd('mv %s %s' % (out_file, CG_PATH))
+    else: os.system('cp %s %s' % (EXISTED_CG_PATH, TMP_DIR))
 
     func2id = FixFuncs.fix_cg_json()
     generate_useful_funclist(func2id, addr2func)
@@ -195,6 +214,7 @@ def generate_fixed_json_file(binary_path):
     time.sleep(1)
     # for func_addr in addr2func.keys():
     #     r2.send('s ' + str(func_addr))
+    r2.send('aaa')
     r2.send('echo [ > ' + CFG_PATH)
     r2.send('agfj >> ' + CFG_PATH)
     r2.send('echo ] >> ' + CFG_PATH)
@@ -207,7 +227,21 @@ def generate_fixed_json_file(binary_path):
     FixFuncs.fix_cfg_json(addr2str, addr2func, func2id)
 
 def main():
-    binary_path = sys.argv[1]
+    global DEBUG, EXISTED_CG_PATH
+
+    args = get_args()
+    if os.path.exists(args.binary) and os.path.isfile(args.binary):
+        binary_path = args.binary
+    else:
+        print('input file???')
+        sys.exit(1)
+    if args.debug: DEBUG = 1
+    if args.input:
+        if os.path.exists(args.input) and os.path.isfile(args.input):
+            EXISTED_CG_PATH = args.input
+        else:
+            print('[-i] must be a existed file.')
+            sys.exit(1)
 
     generate_fixed_json_file(binary_path)
 
@@ -216,9 +250,6 @@ def main():
 
 
 if __name__ == '__main__':
-    if len(sys.argv) < 2: sys.exit('Usage')
-    if len(sys.argv) == 3: DEBUG = 1
-
     start_time = time.time()
 
     try:
