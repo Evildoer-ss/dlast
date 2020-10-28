@@ -5,14 +5,14 @@
 - [x] 改helper，建全图；
 - [ ] r2跟iblessing方法名字匹配；
 - [x] 可以输入iblessing跳过分析；
-- [x] 去掉不是cstr.开头的字符串；
-- [ ] 整理helper的输出结果；
+- [x] 去掉不是cstr.开头的字符串；（？）
+- [ ] 整理helper的输出结果；（IDA看不动...）
 
 fuzz部分：
 
-- [ ] openURL(url)；
-- [ ] 把所有静态分析到的方法都hook一下(可能几百到一千?)，然后记录trace；
-- [ ] 要有feedback吗？
+- [x] openURL(url)；
+- [x] 把所有静态分析到的方法都hook一下(可能几百到一千?)，然后记录trace；
+- [ ] 要有feedback吗？（算了）
 
 ## For Developer
 

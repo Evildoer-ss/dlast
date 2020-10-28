@@ -153,7 +153,6 @@ void CallGraph::dfs(vector<Function*>& prevs, Function* cur) {
         //     if (cur->getCorpus().size() && cur->getCorpus()[0].compare("")) {
         //         cout << cur->getCorpus()[0] << endl;
         //     }
-        //     // TODO
         //     string str = vector2str(cur->getCorpus());
         //     if (str.compare("")) { corpus_.push_back(str); }
         // }

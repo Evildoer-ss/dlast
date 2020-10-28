@@ -7,9 +7,10 @@ import time
 import frida
 
 
+TEST = 0
 TMP_DIR = None
-CFG_JSON_PATH = None
-CORPUS_PATH = None
+IS_GET_IGNORED_METHODS = False
+IGNORED_METHODS = []
 
 
 attach_func = '''
@@ -17,7 +18,7 @@ method = ObjC.classes["{0}"]["{1}"];
 if (method != undefined) {{
     Interceptor.attach(method.implementation, {{
         onEnter: function (args) {{
-            method_dict["TTRoute - openURL:userInfo:objHandler:"] = 1;
+            method_dict["{0} {1}"] = 1;
         }},
         onLeave: function (retVal) {{
         }}
@@ -66,7 +67,18 @@ def generate_frida_script():
         # method_name += ':'
         JS_CODE += attach_func.format(class_name, method_name)
 
-    # open(os.path.join(TMP_DIR, 'a.js'), 'w').write(JS_CODE)
+    open(os.path.join(TMP_DIR, 'frida_script.js'), 'w').write(JS_CODE)
+
+def fuzz_test_url(script):
+    url_list = [
+        'lark://applink.feishu.cn/client/mini_program/open?appId=1234567890&mode=window',
+        'lark://applink.feishu.cn/client/chat/open?openId=1234567890',
+        'lark://sdlfkjhgh'
+    ]
+    for url in url_list:
+        script.exports.openurl(url)
+        time.sleep(1)
+        script.exports.get_method_dict()
 
 
 def fuzz(tmp_dir):
@@ -75,20 +87,29 @@ def fuzz(tmp_dir):
     print('Generating frida script...')
     generate_frida_script()
 
-    print('%s Start fuzzing...' % str(time.time()))
+    print('%s Start fuzzing...' % str(time.asctime(time.localtime(time.time()))))
 
     fresult = open(os.path.join(TMP_DIR, 'result.txt'), 'w')
 
     def dump_trace(trace_info):
         if trace_info['is_openurl_success'] == False: return
-        fresult.write('[* %d] %s\n' % (len(trace_info.keys()) - 2, trace_info['cur_scheme_url']))
+        fresult.write('[# %d] %s\n' % (len(trace_info.keys()) - 2, trace_info['cur_scheme_url']))
+        global IGNORED_METHODS
         for key, value in trace_info.items():
-            if value == 0 or key == 'is_openurl_success' or key == 'cur_scheme_url': continue
+            if value == 0 or key in IGNORED_METHODS: continue
             fresult.write(key + '\n')
         fresult.write('\n')
 
     def on_message(message, data):
         if message['type'] == 'send':
+            global IS_GET_IGNORED_METHODS
+            if IS_GET_IGNORED_METHODS == False:
+                global IGNORED_METHODS
+                IGNORED_METHODS = list(message['payload'])
+                IGNORED_METHODS.append('is_openurl_success')
+                IGNORED_METHODS.append('cur_scheme_url')
+                IS_GET_IGNORED_METHODS = True
+                return
             dump_trace(message['payload'])
         elif message['type'] == 'error':
             print(message['description'])
@@ -100,11 +121,12 @@ def fuzz(tmp_dir):
     script.on('message', on_message)
     script.load()
 
-    # script.exports.get_method_dict()
+    time.sleep(2)
+    # Exclude methods that are constantly being called.
+    script.exports.get_method_dict()
+    time.sleep(1)
 
-    # script.exports.openurl('lark://applink.feishu.cn/client/chat/open?openId=1234567890')
-    # time.sleep(0.5)
-    # script.exports.get_method_dict()
+    if TEST: fuzz_test_url(script)
 
     corpus_list = open(os.path.join(TMP_DIR, 'corpus.txt')).readlines()
     curid, length = 0, len(corpus_list)
@@ -116,7 +138,7 @@ def fuzz(tmp_dir):
         time.sleep(0.3)
         script.exports.get_method_dict()
         script.exports.clear_method_dict()
-        # break
+        if TEST: break
     print('\r%d / %d' % (length, length), end='', flush=True)
     print('')
 
@@ -128,4 +150,5 @@ def fuzz(tmp_dir):
 
 
 if __name__ == "__main__":
+    if len(sys.argv) > 1: TEST = 1
     fuzz('/Users/ssj/tmp/1603771596.062644')
