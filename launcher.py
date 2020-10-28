@@ -8,6 +8,8 @@ import subprocess
 import ctypes
 import argparse
 
+from src.utils.fuzzer import fuzz
+
 
 DEBUG = 0
 
@@ -247,6 +249,8 @@ def main():
 
     helper_lib = ctypes.CDLL(os.path.join(PROJ_ROOT_PATH, 'libs', 'libhelper.dylib'))
     helper_lib.GenerateCorpus(TMP_DIR.encode())
+
+    fuzz(TMP_DIR)
 
 
 if __name__ == '__main__':
