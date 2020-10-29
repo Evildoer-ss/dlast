@@ -1,6 +1,8 @@
 # DLAST
 
+## Requirements
 
+需要安装魔改版的radare2，<https://github.com/Evildoer-ss/radare2>。（目前还没集成到包里）
 
 ## USAGE
 
@@ -40,6 +42,7 @@ python3 ./launcher.py -i ~/tmp/lark/cg.json -p test/Lark/Payload/Lark.app/Info.p
 - [x] openURL(url)；
 - [x] 把所有静态分析到的方法都hook一下(可能几百到一千?)，然后记录trace；
 - [ ] 要有feedback吗？（算了）
+- [ ] 魔改版radare2集成到repo里；
 
 ## For Developer
 
