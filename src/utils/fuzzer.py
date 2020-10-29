@@ -48,6 +48,17 @@ rpc.exports = {
 };
 '''
 
+def get_process_name(bundleID):
+    for line in os.popen('frida-ps -Uai').readlines():
+        if bundleID in line:
+            tgt_list = line.split(' ')
+            while '' in tgt_list:
+                tgt_list.remove('')
+            return tgt_list[1]
+    # return '飞书'
+    print('Not found APP name by bundleID: %s' % bundleID)
+    sys.exit(1)
+
 def generate_frida_script():
     global JS_CODE
 
@@ -73,15 +84,20 @@ def fuzz_test_url(script):
     url_list = [
         'lark://applink.feishu.cn/client/mini_program/open?appId=1234567890&mode=window',
         'lark://applink.feishu.cn/client/chat/open?openId=1234567890',
-        'lark://sdlfkjhgh'
+        'lark://sdlfkjhgh',
+        'lark://fromaccount_manager',
+        'lark://applink.feishu.cn/client/web_app/open?appId=xxx&path=/a/b&xxd=123'
     ]
     for url in url_list:
         script.exports.openurl(url)
         time.sleep(1)
         script.exports.get_method_dict()
+        time.sleep(0.2)
+        script.exports.clear_method_dict()
 
 
-def fuzz(tmp_dir):
+def fuzz(tmp_dir, bundleID):
+    name = get_process_name(bundleID)
     global TMP_DIR, JS_CODE
     TMP_DIR = tmp_dir
     print('Generating frida script...')
@@ -93,12 +109,11 @@ def fuzz(tmp_dir):
 
     def dump_trace(trace_info):
         if trace_info['is_openurl_success'] == False: return
-        fresult.write('[# %d] %s\n' % (len(trace_info.keys()) - 2, trace_info['cur_scheme_url']))
         global IGNORED_METHODS
+        fresult.write('[# %d] %s\n' % (len(set(list(trace_info.keys())).difference(set(IGNORED_METHODS))), trace_info['cur_scheme_url']))
         for key, value in trace_info.items():
             if value == 0 or key in IGNORED_METHODS: continue
             fresult.write(key + '\n')
-        fresult.write('\n')
 
     def on_message(message, data):
         if message['type'] == 'send':
@@ -116,28 +131,32 @@ def fuzz(tmp_dir):
         else:
             print(message)
 
-    process = frida.get_usb_device().attach('飞书')
+    process = frida.get_usb_device().attach(name)
     script = process.create_script(JS_CODE)
     script.on('message', on_message)
     script.load()
 
-    time.sleep(2)
     # Exclude methods that are constantly being called.
+    time.sleep(5)
     script.exports.get_method_dict()
     time.sleep(1)
+    script.exports.clear_method_dict()
 
     if TEST: fuzz_test_url(script)
 
     corpus_list = open(os.path.join(TMP_DIR, 'corpus.txt')).readlines()
+    urlscheme_list = json.loads(open(os.path.join(TMP_DIR, 'URLSchemes.json')).read())
     curid, length = 0, len(corpus_list)
     for url in corpus_list:
         if curid % 10 == 0:
             print('\r%d / %d' % (curid, length), end='', flush=True)
         curid += 1
-        script.exports.openurl('lark://' + url)
-        time.sleep(0.3)
-        script.exports.get_method_dict()
-        script.exports.clear_method_dict()
+        for urlscheme in urlscheme_list:
+            script.exports.openurl(urlscheme + '://' + url.strip())
+            time.sleep(0.1)
+            script.exports.get_method_dict()
+            time.sleep(0.1)
+            script.exports.clear_method_dict()
         if TEST: break
     print('\r%d / %d' % (length, length), end='', flush=True)
     print('')
@@ -151,4 +170,4 @@ def fuzz(tmp_dir):
 
 if __name__ == "__main__":
     if len(sys.argv) > 1: TEST = 1
-    fuzz('/Users/ssj/tmp/1603771596.062644')
+    fuzz('/Users/ssj/tmp/1603959499.56307', '飞书')

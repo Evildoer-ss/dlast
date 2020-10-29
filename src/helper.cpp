@@ -11,8 +11,8 @@ CallGraph* InitFromJson(string tmp_dir) {
     string cfg_path = tmp_dir + "/cfg_fixed.json";
     string cg_path = tmp_dir + "/cg_fixed.json";
 
-    cout << "control flow graph path: " << cfg_path << endl;
-    cout << "call graph path: " << cg_path << endl;
+    // cout << "control flow graph path: " << cfg_path << endl;
+    // cout << "call graph path: " << cg_path << endl;
 
     ifstream in_cfg(cfg_path);
     json raw_cfg;
@@ -63,7 +63,7 @@ void GenerateCorpus(char* c_tmp_dir) {
     call_graph->genCorpus(out);
     // call_graph->PrintCorpus();
 
-    cout << "output file: " << out_path << endl;
+    // cout << "output file: " << out_path << endl;
 
     return;
 }

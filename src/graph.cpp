@@ -34,7 +34,11 @@ void Function::genContronFlowGraph() {
 // may mutator's location
 string vector2str(vector<string>& str) {
     string res = "";
+    bool need_sep = false;
     for (int i = 0; i < str.size(); ++i) {
+        if (need_sep) { res += "/"; }
+        if (str[i].compare("")) { need_sep = true; }
+        else { need_sep = false; }
         res += str[i];
     }
     return res;
@@ -101,8 +105,12 @@ void CallGraph::sub_dfs(vector<Function*> prevs, vector<int>& sub_prevs, int idx
     if (sub_prevs.size() == prevs.size()) {
         string str = "";
         // may mutator?
+        bool need_sep = false;
         for (int i = 0; i < prevs.size(); ++i) {
             if (sub_prevs[i] == -1) { continue; }
+            if (need_sep) { str += "/"; }
+            if (prevs[i]->getCorpus()[sub_prevs[i]].compare("")) { need_sep = true; }
+            else { need_sep = false; }
             str += prevs[i]->getCorpus()[sub_prevs[i]];
         }
         if (str.compare("") && find(corpus_.begin(), corpus_.end(), str) == corpus_.end()) {
