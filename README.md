@@ -77,6 +77,7 @@ applink.feishu.cn/client/web_app/open?appId=xxx&path=/a/b&xxd=123
 
 ### 百度
 
+``` js
 var fuzzStrings = ["client/web?url=https://www.baidu.com",
     "web_?url=https://www.baidu.com",
     "jump?url=https://www.baidu.com",
@@ -86,6 +87,7 @@ var fuzzStrings = ["client/web?url=https://www.baidu.com",
     "v1/easybrowse/open?url=http://www.baidu.com&style=menumode&newbrowser=1",
     "passenger/didi?url=https://www.baidu.com"
 ];
+```
 
 ### 钉钉
 
