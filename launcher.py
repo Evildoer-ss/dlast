@@ -169,7 +169,7 @@ def generate_useful_funclist(func2id, addr2func, cg_fixed_path=CG_FIXED_PRE_PATH
     fixed_items = []
     cg_list = json.loads(open(cg_fixed_path).read())
     for it in cg_list:
-        if root_func in it['name']:
+        if root_func.lower() in it['name'].lower():
             queue.append(it)
             func_id_list.append(it['id'])
             fixed_items.append(it)
@@ -214,7 +214,7 @@ def generate_fixed_json_file(binary_path):
 
     while not os.path.exists(STR_PATH) or not os.path.exists(FUNC_PATH): time.sleep(2)
     r2.sendline()
-    time.sleep(1)
+    time.sleep(5)
 
     addr2str = FixFuncs.fix_strs_json()
     addr2func = FixFuncs.fix_funcs_json()

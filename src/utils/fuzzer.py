@@ -5,6 +5,7 @@ import sys
 import json
 import time
 import frida
+import traceback
 
 
 TEST = 0
@@ -105,17 +106,18 @@ def fuzz(tmp_dir, bundleID):
 
     print('%s Start fuzzing...' % str(time.asctime(time.localtime(time.time()))))
 
-    fresult = open(os.path.join(TMP_DIR, 'result.txt'), 'w')
+    fresult = open(os.path.join(TMP_DIR, 'result.md'), 'w')
 
     def dump_trace(trace_info):
         if trace_info['is_openurl_success'] == False: return
         global IGNORED_METHODS
-        fresult.write('[# %d] %s\n' % (len(set(list(trace_info.keys())).difference(set(IGNORED_METHODS))), trace_info['cur_scheme_url']))
+        fresult.write('\n## %d %s\n\n' % (len(set(list(trace_info.keys())).difference(set(IGNORED_METHODS))), trace_info['cur_scheme_url']))
         for key, value in trace_info.items():
             if value == 0 or key in IGNORED_METHODS: continue
             fresult.write(key + '\n')
 
     def on_message(message, data):
+        # print(message)
         if message['type'] == 'send':
             global IS_GET_IGNORED_METHODS
             if IS_GET_IGNORED_METHODS == False:
@@ -147,27 +149,33 @@ def fuzz(tmp_dir, bundleID):
     corpus_list = open(os.path.join(TMP_DIR, 'corpus.txt')).readlines()
     urlscheme_list = json.loads(open(os.path.join(TMP_DIR, 'URLSchemes.json')).read())
     curid, length = 0, len(corpus_list)
-    for url in corpus_list:
-        if curid % 10 == 0:
-            print('\r%d / %d' % (curid, length), end='', flush=True)
-        curid += 1
-        for urlscheme in urlscheme_list:
-            script.exports.openurl(urlscheme + '://' + url.strip())
-            time.sleep(0.1)
-            script.exports.get_method_dict()
-            time.sleep(0.1)
-            script.exports.clear_method_dict()
-        if TEST: break
-    print('\r%d / %d' % (length, length), end='', flush=True)
-    print('')
+    try:
+        for url in corpus_list:
+            if curid % 10 == 0:
+                print('\r%d / %d' % (curid, length), end='', flush=True)
+            curid += 1
+            for urlscheme in urlscheme_list:
+                script.exports.openurl(urlscheme + '://' + url.strip())
+                time.sleep(0.1)
+                script.exports.get_method_dict()
+                time.sleep(0.1)
+                script.exports.clear_method_dict()
+            if TEST: break
+    except Exception as e:
+        print(traceback.print_exc())
+        print(e)
+    finally:
+        print('\r%d / %d' % (curid, length), end='', flush=True)
+        print('')
 
-    time.sleep(1)
-    script.unload()
-    fresult.close()
+        time.sleep(1)
+        script.unload()
+        fresult.close()
 
-    print(os.path.join(TMP_DIR, 'result.txt'))
+        print(os.path.join(TMP_DIR, 'result.md'))
 
 
 if __name__ == "__main__":
     if len(sys.argv) > 1: TEST = 1
-    fuzz('/Users/ssj/tmp/1603959499.56307', '飞书')
+    # fuzz('/Users/ssj/tmp/1604022142.276077', 'com.laiwang.DingTalk')
+    fuzz('/Users/ssj/tmp/1604285100.191467', 'org.OXHainan.ditialWallet.C66J8DCH79')
